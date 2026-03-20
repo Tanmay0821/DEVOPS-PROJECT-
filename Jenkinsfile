@@ -2,42 +2,56 @@ pipeline {
     agent any
 
     environment {
-        IMAGE_NAME = "frontend-app"
-        CONTAINER_NAME = "frontend-container"
+        IMAGE_NAME = "ecommerce-app"
+        CONTAINER_NAME = "ecommerce-container"
+        PORT = "8080"
     }
 
     stages {
 
-        stage('Clone Repo') {
+        stage('1. SCM - Pull Code') {
             steps {
-                git 'https://github.com/your-repo/frontend-app.git'
+                git url: 'https://github.com/your-username/ecommerce-app.git', branch: 'main'
             }
         }
 
-        stage('Build Docker Image') {
+        stage('2. Stop & Remove Old Container') {
             steps {
                 script {
-                    sh 'docker build -t $IMAGE_NAME .'
+                    sh """
+                    docker stop ${CONTAINER_NAME} || true
+                    docker rm ${CONTAINER_NAME} || true
+                    """
                 }
             }
         }
 
-        stage('Run Container') {
+        stage('3. Remove Old Image') {
             steps {
                 script {
-                    sh '''
-                    docker stop $CONTAINER_NAME || true
-                    docker rm $CONTAINER_NAME || true
-                    docker run -d -p 8080:80 --name $CONTAINER_NAME $IMAGE_NAME
-                    '''
+                    sh """
+                    docker rmi ${IMAGE_NAME} || true
+                    """
                 }
             }
         }
 
-        stage('Test App') {
+        stage('4. Build Docker Image') {
             steps {
                 script {
-                    sh 'curl -I http://localhost:8080'
+                    sh """
+                    docker build -t ${IMAGE_NAME} .
+                    """
+                }
+            }
+        }
+
+        stage('5. Run Docker Container') {
+            steps {
+                script {
+                    sh """
+                    docker run -d -p ${PORT}:80 --name ${CONTAINER_NAME} ${IMAGE_NAME}
+                    """
                 }
             }
         }
@@ -45,10 +59,10 @@ pipeline {
 
     post {
         success {
-            echo 'Deployment Successful 🚀'
+            echo "Deployment Successful 🚀"
         }
         failure {
-            echo 'Build Failed ❌'
+            echo "Pipeline Failed ❌"
         }
     }
 }
